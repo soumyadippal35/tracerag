@@ -44,7 +44,8 @@ function App() {
   const inputRef = useRef(null);
 
   const token = localStorage.getItem('tracerag_token'); const authHeaders = { Authorization: `Bearer ${token}` };
-  const loadDocuments = () => fetch(`${API}/documents`, {headers: authHeaders}).then((r) => r.ok ? r.json() : []).then(setDocuments).catch(() => setDocuments([]));
+  const signOut = () => { localStorage.removeItem('tracerag_token'); localStorage.removeItem('tracerag_email'); setUser(null); };
+  const loadDocuments = () => fetch(`${API}/documents`, {headers: authHeaders}).then((r) => { if (r.status === 401) signOut(); return r.ok ? r.json() : []; }).then(setDocuments).catch(() => setDocuments([]));
   useEffect(() => { if (user) loadDocuments(); }, [user]);
 
   async function upload(file) {
@@ -64,7 +65,7 @@ function App() {
 
   if (!user) return <Login onAuth={(email) => { localStorage.setItem('tracerag_email', email); setUser(email); }} />;
   return <div className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark"><Sparkles size={16}/></span><span>Trace<span className="brand-accent">RAG</span></span></div><div className="topbar-right"><span className="status"><span className="pulse"/>System operational</span><button className="icon-button" title="New session" onClick={() => {setAnswer(null);setQuestion('')}}><Plus size={18}/></button><div className="avatar">PP</div></div></header>
+    <header className="topbar"><div className="brand"><span className="brand-mark"><Sparkles size={16}/></span><span>Trace<span className="brand-accent">RAG</span></span></div><div className="topbar-right"><span className="status"><span className="pulse"/>System operational</span><button className="icon-button" title="New session" onClick={() => {setAnswer(null);setQuestion('')}}><Plus size={18}/></button><button className="avatar" title="Sign out" onClick={signOut}>PP</button></div></header>
     <main className="workspace">
       <aside className="sidebar"><div className="eyebrow">Workspace</div><div className="workspace-name">Acme knowledge base <ChevronDown size={15}/></div><nav><a className="active"><Search size={16}/>Ask anything</a><a><FolderOpen size={16}/>Documents <span className="nav-count">{documents.length}</span></a></nav><div className="sidebar-divider"/><div className="eyebrow">Indexed sources</div><div className="doc-list">{documents.length ? documents.map((doc) => <div className="doc-item" key={doc.name}><FileText size={16}/><div><strong>{doc.name}</strong><small>{doc.chunks} chunks</small></div><Check className="doc-check" size={14}/></div>) : <div className="empty-docs">No documents yet.<br/>Add a source to begin.</div>}</div><button className="add-source" onClick={() => inputRef.current?.click()}><Upload size={15}/> Add source</button><input ref={inputRef} type="file" accept=".pdf,.txt,.md,.csv" hidden onChange={(e) => upload(e.target.files[0])}/><div className="sidebar-foot"><ShieldCheck size={15}/><span>Citations are always<br/>linked to source text.</span></div></aside>
       <section className="content"><div className="content-head"><div><div className="eyebrow">Production RAG / Query</div><h1>Ask your <em>company.</em></h1><p className="subhead">Grounded answers from your internal knowledge base.</p></div><div className="retrieval-badge"><span className="badge-dot"/>Hybrid retrieval <strong>BM25 + dense</strong></div></div>
