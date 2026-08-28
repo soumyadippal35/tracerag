@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from time import perf_counter
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -7,7 +8,8 @@ from .models import DocumentSummary, HealthResponse, QueryRequest, QueryResponse
 from .store import DocumentStore
 
 app = FastAPI(title="TraceRAG API", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["*"], allow_headers=["*"])
+allowed_origins = [origin.strip() for origin in os.getenv("TRAGERAG_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if origin.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=["*"], allow_headers=["*"])
 store = DocumentStore()
 
 
@@ -25,6 +27,8 @@ def documents():
 @app.post("/api/documents/upload", response_model=DocumentSummary)
 async def upload(file: UploadFile = File(...)):
     content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Files must be smaller than 10 MB")
     if not file.filename:
         raise HTTPException(400, "A file name is required")
     suffix = Path(file.filename).suffix.lower()

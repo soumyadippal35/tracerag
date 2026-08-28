@@ -5,6 +5,9 @@ client = TestClient(app)
 
 
 def setup_function():
+    with store._connect() as connection:
+        connection.execute("DELETE FROM chunks")
+        connection.execute("DELETE FROM documents")
     store.documents.clear()
     store.retriever.replace([])
 
@@ -17,3 +20,11 @@ def test_upload_and_query():
     body = response.json()
     assert "three days" in body["answer"]
     assert body["citations"][0]["document"] == "handbook.txt"
+
+
+def test_documents_survive_store_reload():
+    store.add_text("persistent.txt", "The incident response owner is the platform team.", 52)
+    from app.store import DocumentStore
+    reloaded = DocumentStore()
+    assert reloaded.list_documents()[0]["name"] == "persistent.txt"
+    assert reloaded.search("Who owns incident response?", 1)[0].chunk.document == "persistent.txt"
