@@ -82,4 +82,6 @@ function App() {
 
 export default App;
 
-createRoot(document.getElementById('root')).render(<App />);
+const rootElement = document.getElementById('root');
+const root = rootElement.__traceragRoot || (rootElement.__traceragRoot = createRoot(rootElement));
+root.render(<App />);
