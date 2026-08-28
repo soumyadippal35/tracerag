@@ -1,17 +1,38 @@
 import os
 from pathlib import Path
 from time import perf_counter
-from fastapi import Depends, FastAPI, File, Header, UploadFile, HTTPException
+from fastapi import Depends, FastAPI, File, Header, UploadFile, HTTPException, Request
+from fastapi.responses import Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from fastapi.middleware.cors import CORSMiddleware
 from .answering import build_answer
 from .auth import create_token, read_token
 from .models import AuthRequest, AuthResponse, DocumentSummary, HealthResponse, QueryRequest, QueryResponse, Citation
 from .store import DocumentStore
+from .metrics import INGESTIONS, QUERY_LATENCY, REQUESTS
+from .platform import BlobStore, RateLimiter
 
 app = FastAPI(title="TraceRAG API", version="1.0.0")
+limiter = RateLimiter(limit=int(os.getenv("TRAGERAG_RATE_LIMIT", "120")))
+auth_limiter = RateLimiter(limit=10)
+blob_store = BlobStore()
 allowed_origins = [origin.strip() for origin in os.getenv("TRAGERAG_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=["*"], allow_headers=["*"])
 store = DocumentStore()
+
+
+@app.middleware("http")
+async def production_middleware(request: Request, call_next):
+    key = request.client.host if request.client else "unknown"
+    if request.url.path.startswith("/api/auth/"):
+        if not auth_limiter.allowed(key):
+            return Response("Too many requests", status_code=429)
+    elif request.url.path.startswith("/api/") and not limiter.allowed(key):
+        return Response("Too many requests", status_code=429)
+    response = await call_next(request)
+    REQUESTS.labels(request.method, request.url.path, str(response.status_code)).inc()
+    response.headers["X-Request-ID"] = os.urandom(8).hex()
+    return response
 
 
 def current_user(authorization: str | None = Header(default=None)) -> str:
@@ -27,6 +48,11 @@ def current_user(authorization: str | None = Header(default=None)) -> str:
 def health():
     documents, chunks = store.stats()
     return {"status": "operational", "documents": documents, "chunks": chunks}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/documents", response_model=list[DocumentSummary])
@@ -48,6 +74,8 @@ async def upload(file: UploadFile = File(...), _: str = Depends(current_user)):
         summary = store.add_text(file.filename, content.decode("utf-8", errors="ignore"), len(content))
     else:
         raise HTTPException(415, "Supported files: PDF, TXT, MD, CSV")
+    blob_store.put(file.filename, content)
+    INGESTIONS.inc()
     return summary
 
 
@@ -56,6 +84,7 @@ def query(request: QueryRequest, _: str = Depends(current_user)):
     started = perf_counter()
     results = store.search(request.question, request.top_k)
     citations = [Citation(document=item.chunk.document, page=item.chunk.page, snippet=item.chunk.text[:240], score=round(item.score, 3)) for item in results if item.score > 0]
+    QUERY_LATENCY.observe(perf_counter() - started)
     return QueryResponse(answer=build_answer(request.question, results), citations=citations, retrieval_mode="hybrid - BM25 + dense", latency_ms=round((perf_counter() - started) * 1000))
 
 

@@ -36,6 +36,9 @@ Open http://localhost:5173 and create an account. Upload `sample-docs/company-ha
 - Signed authentication with protected routes
 - Three.js knowledge-space visualization
 - Nginx same-origin API proxy for container deployment
+- Redis-backed rate limiting when deployed with multiple API replicas
+- Prometheus metrics at `/metrics` with a bundled scrape config
+- S3-compatible raw document storage and managed-vector provider configuration
 
 ## Docker
 
@@ -43,8 +46,8 @@ Open http://localhost:5173 and create an account. Upload `sample-docs/company-ha
 docker compose up --build
 ```
 
-The frontend is available at http://localhost:5173 and the API at http://localhost:8000.
+The frontend is available at http://localhost:5173, the API at http://localhost:8000, and Prometheus at http://localhost:9090.
 
 ## Production next steps
 
-Before public release, set a strong `TRAGERAG_AUTH_SECRET`, add HTTPS and rate limiting, use a managed identity provider, and move retrieval to Qdrant or pgvector. The current local extractive answerer is intentionally keyless and interview-friendly; it is not a substitute for an evaluated LLM answer service.
+Before public release, set a strong `TRAGERAG_AUTH_SECRET`, put the edge behind HTTPS, use a managed OIDC identity provider, configure Redis, S3, and Qdrant/pgvector through the environment, and add alerting to your Prometheus-compatible monitoring platform. The current local extractive answerer is intentionally keyless and interview-friendly; it is not a substitute for an evaluated LLM answer service.

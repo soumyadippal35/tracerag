@@ -8,6 +8,8 @@ services:
       TRAGERAG_AUTH_SECRET: ${TRAGERAG_AUTH_SECRET:-local-only-change-this-before-deploy}
       TRAGERAG_DB_PATH: /data/tracerag.db
       TRAGERAG_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      TRAGERAG_REDIS_URL: redis://redis:6379/0
+      TRAGERAG_UPLOAD_DIR: /data/uploads
     volumes:
       - tracerag-data:/data
   web:
@@ -16,6 +18,22 @@ services:
       - "5173:80"
     depends_on:
       - api
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - tracerag-redis:/data
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - tracerag-metrics:/prometheus
+    depends_on:
+      - api
 
 volumes:
   tracerag-data:
+  tracerag-redis:
+  tracerag-metrics:
