@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { ArrowUp, Check, ChevronDown, FileText, FolderOpen, Gauge, LoaderCircle, Plus, Search, ShieldCheck, Sparkles, Upload, X } from 'lucide-react';
 import './styles.css';
 
@@ -46,3 +47,5 @@ function App() {
 }
 
 export default App;
+
+createRoot(document.getElementById('root')).render(<App />);
