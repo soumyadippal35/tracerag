@@ -22,7 +22,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Upload `sample-docs/company-handbook.txt`, then ask: `What is our remote work policy?`
+Open http://localhost:5173 and create an account. Upload `sample-docs/company-handbook.txt`, then ask: `What is our remote work policy?`
 
 ## What is included
 
@@ -33,6 +33,9 @@ Open http://localhost:5173. Upload `sample-docs/company-handbook.txt`, then ask:
 - Local extractive answer generation with no API key required
 - React/Vite interface with evidence expansion, latency, and indexing state
 - Focused API test
+- Signed authentication with protected routes
+- Three.js knowledge-space visualization
+- Nginx same-origin API proxy for container deployment
 
 ## Docker
 
@@ -44,4 +47,4 @@ The frontend is available at http://localhost:5173 and the API at http://localho
 
 ## Production next steps
 
-Replace `app/answering.py` with an OpenAI or Anthropic adapter, move the in-memory store to Qdrant/Chroma, persist ingestion metadata, and add authentication before exposing it outside a trusted network.
+Before public release, set a strong `TRAGERAG_AUTH_SECRET`, add HTTPS and rate limiting, use a managed identity provider, and move retrieval to Qdrant or pgvector. The current local extractive answerer is intentionally keyless and interview-friendly; it is not a substitute for an evaluated LLM answer service.

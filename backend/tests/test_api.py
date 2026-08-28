@@ -26,6 +26,15 @@ def test_upload_and_query():
     assert body["citations"][0]["document"] == "handbook.txt"
 
 
+def test_protected_routes_and_login():
+    assert client.get("/api/documents").status_code == 401
+    client.post("/api/auth/register", json={"email": "owner@example.com", "password": "secure-pass-123"})
+    response = client.post("/api/auth/login", json={"email": "owner@example.com", "password": "wrong-pass"})
+    assert response.status_code == 401
+    response = client.post("/api/auth/login", json={"email": "owner@example.com", "password": "secure-pass-123"})
+    assert response.status_code == 200
+
+
 def test_documents_survive_store_reload():
     store.add_text("persistent.txt", "The incident response owner is the platform team.", 52)
     from app.store import DocumentStore
