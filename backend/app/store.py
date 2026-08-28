@@ -5,6 +5,7 @@ from pathlib import Path
 from pypdf import PdfReader
 from .chunking import Chunk, chunk_text
 from .retrieval import HybridRetriever
+from .auth import hash_password, verify_password
 
 
 class DocumentStore:
@@ -32,7 +33,23 @@ class DocumentStore:
                     text TEXT NOT NULL, page INTEGER, chunk_index INTEGER NOT NULL,
                     FOREIGN KEY(document) REFERENCES documents(name) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS users (
+                    email TEXT PRIMARY KEY, password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
             """)
+
+    def create_user(self, email: str, password: str) -> bool:
+        try:
+            with self._connect() as connection:
+                connection.execute("INSERT INTO users(email, password_hash) VALUES (?, ?)", (email.lower(), hash_password(password)))
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def verify_user(self, email: str, password: str) -> bool:
+        with self._connect() as connection:
+            row = connection.execute("SELECT password_hash FROM users WHERE email = ?", (email.lower(),)).fetchone()
+        return bool(row and verify_password(password, row["password_hash"]))
 
     def _load(self) -> None:
         with self._connect() as connection:

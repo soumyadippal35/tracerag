@@ -10,12 +10,16 @@ def setup_function():
         connection.execute("DELETE FROM documents")
     store.documents.clear()
     store.retriever.replace([])
+    with store._connect() as connection:
+        connection.execute("DELETE FROM users")
 
 
 def test_upload_and_query():
-    response = client.post("/api/documents/upload", files={"file": ("handbook.txt", b"Remote work is available three days per week. Team leads approve exceptions.", "text/plain")})
+    auth = client.post("/api/auth/register", json={"email": "test@example.com", "password": "secure-pass-123"}).json()
+    headers = {"Authorization": f"Bearer {auth['token']}"}
+    response = client.post("/api/documents/upload", files={"file": ("handbook.txt", b"Remote work is available three days per week. Team leads approve exceptions.", "text/plain")}, headers=headers)
     assert response.status_code == 200
-    response = client.post("/api/query", json={"question": "How often is remote work available?"})
+    response = client.post("/api/query", json={"question": "How often is remote work available?"}, headers=headers)
     assert response.status_code == 200
     body = response.json()
     assert "three days" in body["answer"]

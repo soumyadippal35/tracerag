@@ -5,6 +5,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      TRAGERAG_AUTH_SECRET: ${TRAGERAG_AUTH_SECRET:-local-only-change-this-before-deploy}
       TRAGERAG_DB_PATH: /data/tracerag.db
       TRAGERAG_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     volumes:

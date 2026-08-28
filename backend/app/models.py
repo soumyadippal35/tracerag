@@ -30,3 +30,13 @@ class HealthResponse(BaseModel):
     status: str
     documents: int
     chunks: int
+
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AuthResponse(BaseModel):
+    token: str
+    email: str
